@@ -14,10 +14,15 @@ type KrunkerAPI struct {
 
 func NewKrunkerAPI() (*KrunkerAPI, error) {
 	url := url.URL{Scheme: "wss", Host: "social.krunker.io", Path: "/ws"}
-	headers := http.Header{"Origin": []string{"https://krunker.io"}}
-	log.Printf("Websocket connection opned")
+	header := http.Header{}
+	header.Add("Origin", "https://krunker.io")
+	header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36")
+	header.Add("Pragma", "no-cache")
+	header.Add("Cache-Control", "no-cache")
 
-	conn, _, err := websocket.DefaultDialer.Dial(url.String(), headers)
+	log.Printf("Websocket connection opened")
+
+	conn, _, err := websocket.DefaultDialer.Dial(url.String(), header)
 
 	if err != nil {
 		log.Fatal("dial:", err)
