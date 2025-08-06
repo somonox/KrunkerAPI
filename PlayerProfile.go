@@ -2,6 +2,7 @@ package KrunkerAPI
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"time"
 
@@ -20,7 +21,7 @@ type Profile struct {
 	Wins               uint16
 	Losses             uint16
 	Nukes              float64
-	KR                 uint8
+	KR                 uint16
 	Inventory          uint16
 	Junk               string
 	Shots              float64
@@ -39,85 +40,149 @@ type Profile struct {
 	Sprays             float64
 }
 
-func (api KrunkerAPI) GetProfile(username string) (*Profile, *[]interface{}) {
-	p := Profile{}
+func toString(m map[string]interface{}, key string) string {
+	if v, ok := m[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
 
+func toUint16(m map[string]interface{}, key string) uint16 {
+	if v, ok := m[key]; ok {
+		switch val := v.(type) {
+		case float64:
+			return uint16(val)
+		case int:
+			return uint16(val)
+		case uint16:
+			return val
+		}
+	}
+	return 0
+}
+
+func toUint32(m map[string]interface{}, key string) uint32 {
+	if v, ok := m[key]; ok {
+		switch val := v.(type) {
+		case float64:
+			return uint32(val)
+		case int:
+			return uint32(val)
+		case uint32:
+			return val
+		}
+	}
+	return 0
+}
+
+func toInt8(m map[string]interface{}, key string) int8 {
+	if v, ok := m[key]; ok {
+		switch val := v.(type) {
+		case float64:
+			return int8(val)
+		case int:
+			return int8(val)
+		case int8:
+			return val
+		}
+	}
+	return 0
+}
+
+func toFloat64(m map[string]interface{}, key string) float64 {
+	if v, ok := m[key]; ok {
+		if f, ok := v.(float64); ok {
+			return f
+		}
+	}
+	return 0
+}
+
+func (api KrunkerAPI) GetProfile(username string) (*Profile, *[]interface{}, error) {
 	message := []interface{}{"r", "profile", username}
 	packedMessage, err := msgpack.Marshal(message)
 	if err != nil {
-		log.Println("Error encoding message:", err)
+		return nil, nil, errors.New("failed to encode message: " + err.Error())
 	}
+
 	err = api.conn.WriteMessage(websocket.BinaryMessage, append(packedMessage, 0x00, 0x00))
 	if err != nil {
-		log.Println("Write error:", err)
-		return nil, nil
+		return nil, nil, errors.New("failed to write message: " + err.Error())
 	}
 
 	log.Println("Sent:", message)
 
-	// 잠시 대기
 	time.Sleep(2 * time.Second)
 
 	for {
-		_, message, err := api.conn.ReadMessage()
+		_, msg, err := api.conn.ReadMessage()
 		if err != nil {
-			log.Println("Read error:", err)
-			return nil, nil
+			return nil, nil, errors.New("failed to read message: " + err.Error())
 		}
 
-		// 수신한 메시지 출력
+		if len(msg) < 2 {
+			continue // 메시지가 너무 짧으면 무시
+		}
+
 		var decodedMessage []interface{}
-		err = msgpack.Unmarshal(message[:len(message)-2], &decodedMessage)
+		err = msgpack.Unmarshal(msg[:len(msg)-2], &decodedMessage)
 		if err != nil {
-			log.Println("Error decoding message:", err)
+			log.Println("Failed to decode message:", err)
 			continue
 		}
 
-		if len(decodedMessage) > 2 {
-			var player_stats map[string]interface{}
-			var profile map[string]interface{}
-
-			if decodedMessage[3] == nil {
-				return nil, nil
-			}
-
-			err := json.Unmarshal([]byte(decodedMessage[3].(map[string]interface{})["player_stats"].(string)), &player_stats)
-			profile = decodedMessage[3].(map[string]interface{})
-
-			if err != nil {
-				log.Println("Error: ", err)
-				return nil, nil
-			}
-
-			p.Name = profile["player_name"].(string)
-			p.Clan = profile["player_clan"].(string)
-			p.Kills = profile["player_kills"].(uint16)
-			p.Deaths = profile["player_deaths"].(uint16)
-			p.Score = profile["player_score"].(uint32)
-			p.Time = profile["player_timeplayed"].(uint32)
-			p.Played = profile["player_games_played"].(uint16)
-			p.Wins = profile["player_wins"].(uint16)
-			p.Losses = p.Played - p.Wins
-			p.Nukes = player_stats["n"].(float64)
-			p.KR = profile["player_funds"].(uint8)
-			p.Inventory = profile["player_skinvalue"].(uint16)
-			p.Junk = profile["player_elo4"].(string)
-			p.Shots = player_stats["s"].(float64)
-			p.Hits = player_stats["hs"].(float64)
-			p.Misses = p.Shots - p.Hits
-			p.WallBangs = player_stats["wb"].(float64)
-			p.HeadShots = player_stats["h"].(float64)
-			p.LegShots = player_stats["ls"].(float64)
-			p.DateNew = profile["player_datenew"].(string)
-			p.Followed = profile["player_followed"].(int8)
-			p.Following = profile["player_following"].(int8)
-			p.Crouches = player_stats["crc"].(float64)
-			p.MeleeKills = player_stats["mk"].(float64)
-			p.ThrowingMeleeKills = player_stats["tmk"].(float64)
-			p.FistKills = player_stats["fk"].(float64)
-			p.Sprays = player_stats["spry"].(float64)
-
-			return &p, &decodedMessage
+		if len(decodedMessage) <= 3 || decodedMessage[3] == nil {
+			continue
 		}
+
+		profileMap, ok := decodedMessage[3].(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		playerStatsStr := toString(profileMap, "player_stats")
+		if playerStatsStr == "" {
+			continue
+		}
+
+		playerStats := map[string]interface{}{}
+		if err := json.Unmarshal([]byte(playerStatsStr), &playerStats); err != nil {
+			log.Println("Failed to unmarshal player_stats:", err)
+			continue
+		}
+
+		p := &Profile{
+			Name:               toString(profileMap, "player_name"),
+			Clan:               toString(profileMap, "player_clan"),
+			Kills:              toUint16(profileMap, "player_kills"),
+			Deaths:             toUint16(profileMap, "player_deaths"),
+			Score:              toUint32(profileMap, "player_score"),
+			Time:               toUint32(profileMap, "player_timeplayed"),
+			Played:             toUint16(profileMap, "player_games_played"),
+			Wins:               toUint16(profileMap, "player_wins"),
+			Losses:             toUint16(profileMap, "player_games_played") - toUint16(profileMap, "player_wins"),
+			Nukes:              toFloat64(playerStats, "n"),
+			KR:                 toUint16(profileMap, "player_funds"),
+			Inventory:          toUint16(profileMap, "player_skinvalue"),
+			Junk:               toString(profileMap, "player_elo4"),
+			Shots:              toFloat64(playerStats, "s"),
+			Hits:               toFloat64(playerStats, "hs"),
+			Misses:             toFloat64(playerStats, "s") - toFloat64(playerStats, "hs"),
+			WallBangs:          toFloat64(playerStats, "wb"),
+			HeadShots:          toFloat64(playerStats, "h"),
+			LegShots:           toFloat64(playerStats, "ls"),
+			DateNew:            toString(profileMap, "player_datenew"),
+			Followed:           toInt8(profileMap, "player_followed"),
+			Following:          toInt8(profileMap, "player_following"),
+			Crouches:           toFloat64(playerStats, "crc"),
+			MeleeKills:         toFloat64(playerStats, "mk"),
+			ThrowingMeleeKills: toFloat64(playerStats, "tmk"),
+			FistKills:          toFloat64(playerStats, "fk"),
+			Sprays:             toFloat64(playerStats, "spry"),
+		}
+
+		return p, &decodedMessage, nil
 	}
 }

@@ -1,7 +1,15 @@
 # KrunkerAPI
-Krunker api with GoLang
+A Simple Krunker api with GoLang
 
 ## Player Profile Request Map
+
+### How to use API
+Simply just type
+```
+go get github.com/somonox/KrunkerAPI@latest
+```
+in your project directory.
+
 
 ### Main Fields
 
@@ -19,6 +27,7 @@ Krunker api with GoLang
 - `player_followed`: Number of followers.
 - `player_following`: Number of people the player is following.
 - `player_elo4`: Junk data or unused.
+- `player_hack`: Flags a player for hacking 1 is hacker tagged, 0 is not hacker tagged.
 
 ### Unclear Fields
 
@@ -32,7 +41,6 @@ Krunker api with GoLang
 - `player_elo2`: Unknown usage.
 - `player_eventcount`: Unclear purpose.
 - `player_featured`: Unknown usage.
-- `player_hack`: Possibly flags a player for hacking but unclear.
 - `player_id`: Player ID, unclear usage.
 - `player_infected`: Possibly related to infection in zombie mode.
 - `player_jobrating`: Player's rating in the game, unclear context.
@@ -88,17 +96,31 @@ The keys and values from `decodedMessage` are outlined above, but some fields re
 package main
 
 import (
-    KrunkerAPI "krunker-api"
-    "log"
+	"log"
+
+	"github.com/somonox/KrunkerAPI"
 )
 
 func main() {
-    api, _ := KrunkerAPI.NewKrunkerAPI()
-    profile, _ := api.GetProfile("a6a6")
+	api, err := KrunkerAPI.NewKrunkerAPI()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer api.Close()
 
-    log.Println(*profile)
+	profile, rawData := api.GetProfile("a6a6")
+	if profile == nil {
+		log.Fatal("Failed to get profile")
+	}
+
+	log.Println("Profile:", *profile)
+	log.Println("Raw data:", *rawData)
 }
 ```
 
-# **Do not use for commercial purposes**
-This project is under development, if you see any bugs or areas that need fixing, please create an issue!
+# Disclaimer
+This project is developed purely for fun and educational purposes.
+
+I do not plan to maintain this project regularly.
+If you find any bugs or issues, feel free to open an issue — I’ll try to address it when I can.
+Contributions are also welcome!
