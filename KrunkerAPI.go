@@ -1,4 +1,4 @@
-package KrunkerAPI
+package krunkerapi
 
 import (
 	"log"
