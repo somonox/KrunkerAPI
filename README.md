@@ -26,7 +26,7 @@ in your project directory.
 - `player_datenew`: Date the player registered.
 - `player_followed`: Number of followers.
 - `player_following`: Number of people the player is following.
-- `player_elo4`: Junk data or unused.
+- `player_elo4`: ranked (season 8) elo (1 2 3 was Yendis ranked).
 - `player_hack`: Flags a player for hacking 1 is hacker tagged, 0 is not hacker tagged.
 
 ### Unclear Fields
@@ -35,19 +35,19 @@ in your project directory.
 - `partner_approved`: Related to verified badges.
 - `player_alias`: Premium alias, if applicable.
 - `player_badge`: Represents player's badges.
-- `player_calls`: Possibly the number of KPD (Krunker Police Department) reports, but unclear.
-- `player_chal`: Might relate to KPD reports, unclear.
-- `player_elo`: Unknown usage.
-- `player_elo2`: Unknown usage.
+- `player_calls`: Total reports to KPD.
+- `player_chal`: Old challenge system (lvl 30 max).
+- `player_elo`: Old ranked 1v1.
+- `player_elo2`: Old ranked 2v2.
 - `player_eventcount`: Unclear purpose.
 - `player_featured`: Unknown usage.
-- `player_id`: Player ID, unclear usage.
-- `player_infected`: Possibly related to infection in zombie mode.
-- `player_jobrating`: Player's rating in the game, unclear context.
-- `player_jobratingpositive`: Positive job ratings, unclear context.
+- `player_id`: Player ID, UID.
+- `player_infected`: Old feature, if someone knife you, you got infected.
+- `player_jobrating`: total calls (helpful + unhelpful).
+- `player_jobratingpositive`: Helpful reports.
 - `player_premium`: Premium badge status.
-- `player_region`: Region or server location.
-- `player_taggedaccounts`: Number of tagged accounts, unclear.
+- `player_region`: A flag selected by the user.
+- `player_taggedaccounts`: "Bans from calls", if more than 1 player call the same cheater but got banned, everyone got this value added.
 - `player_twitchname`: Linked Twitch account name, if any.
 - `player_type`: Unclear usage.
 
